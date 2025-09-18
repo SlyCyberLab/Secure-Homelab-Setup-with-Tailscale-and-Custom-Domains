@@ -9,13 +9,10 @@
 
 ## Overview
 
-Tired of typing IP addresses and random ports just to open something in your homelab?
+Tired of typing IP addresses and random ports just to open something in your homelab? This setup gives your lab a serious upgrade — clean URLs, automatic HTTPS, and secure access without touching your router.
 
-This setup gives your lab a serious upgrade — clean URLs, automatic HTTPS, and secure access without touching your router.
-No more 192.168.x.x:9000. Instead, you'll get URLs like: https://portainer.docker-host.example.com
+No more 192.168.x.x:9000. Instead, you'll get URLs like: `https://portainer.docker-host.example.com`
 Only your devices (via Tailscale) can access them, and SSL certs are handled automatically.
-It's like giving your homelab a professional front door — minus the hassle.
-The change to docker-host.example.com keeps it consistent with the hierarchical domain structure you use throughout the rest of the guide, where services are organized by server name.
 
 **Technology Stack:**
 - Tailscale (Zero-trust VPN)
