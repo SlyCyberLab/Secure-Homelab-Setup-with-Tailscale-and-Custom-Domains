@@ -9,9 +9,9 @@
 
 ## Overview
 
-This project transforms basic IP-based service access into a professional homelab with custom domains and enterprise-grade security. Services are accessible through clean URLs like `https://portainer.docker-host.example.com` exclusively to authorized devices on your private network.
+Tired of typing IP addresses and port numbers just to access your homelab services?
 
-The setup eliminates the need for traditional port forwarding while providing automatic SSL certificate management and seamless DNS resolution through Tailscale's zero-trust architecture.
+This project turns that clunky experience into a clean, professional setup using custom domains, automatic HTTPS, and secure access, without needing port forwarding. Services are available at easy-to-remember URLs like (https://portainer.homelab.example.com), accessible only to authorized devices on your private network via Tailscale’s zero-trust architecture.
 
 **Technology Stack:**
 - Tailscale (Zero-trust VPN)
@@ -280,16 +280,19 @@ In NPM admin interface, create proxy hosts for each service:
 - Domain: `npm.docker-host.example.com`
 - Forward: `192.168.1.100:8181`
 - SSL Certificate: `*.docker-host.example.com`
+- Force SSL: Enabled
 
 **Portainer:**
 - Domain: `portainer.docker-host.example.com`
 - Forward: `192.168.1.100:9000`
 - SSL Certificate: `*.docker-host.example.com`
+- Force SSL: Enabled
 
 **Vaultwarden:**
 - Domain: `vault.docker-host.example.com`
 - Forward: `192.168.1.100:8080`
 - SSL Certificate: `*.docker-host.example.com`
+- Force SSL: Enabled
 
 **Wiki.js:**
 - Domain: `wiki.docker-host.example.com`
@@ -300,6 +303,7 @@ In NPM admin interface, create proxy hosts for each service:
 - Domain: `status.docker-host.example.com`
 - Forward: `192.168.1.100:3001`
 - SSL Certificate: `*.docker-host.example.com`
+- Force SSL: Enabled
 
 ## Testing
 
@@ -334,6 +338,7 @@ https://status.docker-host.example.com
 
 **SSL certificate issues:**
 - Confirm Cloudflare API token permissions
+- API formatting in NMP should be like: dns_cloudflare_api_token = YOUR_API_TOKEN_HERE
 - Check NPM certificate logs
 
 **Service not accessible:**
