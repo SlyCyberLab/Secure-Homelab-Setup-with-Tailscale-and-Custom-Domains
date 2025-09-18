@@ -9,7 +9,7 @@
 
 ## Overview
 
-Tired of typing IP addresses and random ports just to open something in your homelab? This setup gives your lab a serious upgrade — clean URLs, automatic HTTPS, and secure access without touching your router.
+Tired of typing IP addresses and random ports just to open a service in your homelab? This setup gives your lab a serious upgrade, clean URLs, automatic HTTPS, and secure access without touching your router.
 
 No more 192.168.x.x:9000. Instead, you'll get URLs like: `https://portainer.docker-host.example.com`
 Only your devices (via Tailscale) can access them, and SSL certs are handled automatically.
