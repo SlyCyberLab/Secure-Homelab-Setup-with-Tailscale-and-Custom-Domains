@@ -1,219 +1,334 @@
 # Secure Homelab with Tailscale and Custom Domains
 
-> **A zero-trust homelab setup demonstrating enterprise-level networking, automatic SSL certificates, and custom domain management without port forwarding.**
-
-![Lab Status](https://img.shields.io/badge/Lab%20Status-Active-brightgreen)
-![Docker](https://img.shields.io/badge/Docker-Compose-2496ED)
-![Tailscale](https://img.shields.io/badge/Tailscale-VPN-000000)
-![SSL](https://img.shields.io/badge/SSL-Let's%20Encrypt-green)
+A zero-trust homelab setup with custom domains, automatic SSL certificates, and no port forwarding required.
 
 ## Overview
 
-This project transforms basic IP-based service access into a professional homelab with custom domains and enterprise-grade security. Services are accessible through clean URLs like `https://portainer.docker-host.example.com` exclusively to authorized devices on your private network.
-
-The setup eliminates the need for traditional port forwarding while providing automatic SSL certificate management and seamless DNS resolution through Tailscale's zero-trust architecture.
-
-### Key Features
-
-- **Zero Port Forwarding**: No firewall holes or exposed services
-- **Custom Domains**: Professional `service.server.domain.com` structure
-- **Automatic SSL**: Wildcard certificates with auto-renewal
-- **Internal DNS**: SplitDNS routing for seamless resolution
-- **Enterprise Security**: Zero-trust network access model
-- **Easy Scaling**: Add services with simple proxy host creation
-
-## Architecture
-
-The system uses a layered approach combining multiple technologies:
-
-```
-Internet → Tailscale Network → Internal DNS → Reverse Proxy → Services
-```
+Transform basic IP-based service access into a professional homelab with custom domains accessible through clean URLs like `https://portainer.docker-host.example.com` exclusively to authorized devices.
 
 **Technology Stack:**
-- **Tailscale** - Zero-trust VPN with subnet routing
-- **Docker & Docker Compose** - Containerized service deployment
-- **Nginx Proxy Manager** - Reverse proxy with SSL termination
-- **dnsmasq** - Internal DNS server for custom domains
-- **Let's Encrypt** - Automated SSL certificate management
-- **Cloudflare** - DNS challenge provider for wildcard certificates
+- Tailscale (Zero-trust VPN)
+- Docker & Docker Compose
+- Nginx Proxy Manager (Reverse Proxy)
+- dnsmasq (Internal DNS)
+- Let's Encrypt (SSL Certificates)
 
-## Services Deployed
+## Prerequisites
 
-### Core Infrastructure
-- **Nginx Proxy Manager** - Web-based reverse proxy configuration
-- **dnsmasq** - Internal DNS resolution for custom domains
-- **Watchtower** - Automatic container update management
-
-### Applications
-- **Portainer** - Docker container management interface
-- **Vaultwarden** - Self-hosted password manager
-- **Wiki.js** - Modern documentation platform
-- **Uptime Kuma** - Service monitoring and status pages
-
-## Network Architecture
-
-The setup creates a secure internal network accessible only through Tailscale:
-
-**DNS Flow:**
-1. Client requests `portainer.docker-host.example.com`
-2. Tailscale routes DNS query to internal dnsmasq server
-3. dnsmasq resolves to Docker host IP
-4. Request reaches Nginx Proxy Manager
-5. NPM proxies to appropriate service with SSL termination
-
-**Security Benefits:**
-- Services never exposed to public internet
-- All traffic encrypted by Tailscale
-- Valid SSL certificates for professional appearance
-- Centralized access control through Tailscale network
-
-## Quick Start
-
-### Prerequisites
 - Domain name with Cloudflare DNS management
-- Tailscale account and network setup
+- Tailscale account
 - Ubuntu Server with Docker installed
 - Minimum 4GB RAM, 20GB storage
 
-### Basic Deployment
+## Installation
 
-1. **Clone and configure DNS server:**
+### 1. Tailscale Setup
+
 ```bash
-# Deploy internal DNS
-mkdir dns-server && cd dns-server
-echo "address=/docker-host.example.com/192.168.1.100" > dnsmasq.conf
-docker run -d --name internal-dns -p 53:53/udp -v ./dnsmasq.conf:/etc/dnsmasq.conf jpillora/dnsmasq
+# Install Tailscale on host server
+curl -fsSL https://tailscale.com/install.sh | sh
+
+# Configure with subnet routing
+tailscale up --advertise-routes=192.168.1.0/24 --ssh
 ```
 
-2. **Configure Tailscale SplitDNS:**
-   - Add nameserver: `192.168.1.100` restricted to `example.com`
-   - Enable DNS override in Tailscale admin
+Go to Tailscale admin console and approve the subnet route.
 
-3. **Deploy Nginx Proxy Manager:**
+### 2. Docker Installation
+
 ```bash
-# Install reverse proxy
-docker run -d --name npm -p 80:80 -p 443:443 -p 8181:81 \
-  -v npm-data:/data -v npm-ssl:/etc/letsencrypt \
-  jc21/nginx-proxy-manager:latest
+# Remove old packages
+for pkg in docker.io docker-doc docker-compose docker-compose-v2; do 
+    sudo apt-get remove $pkg
+done
+
+# Add Docker repository
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Install Docker
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo usermod -aG docker $USER
 ```
 
-4. **Request wildcard SSL certificate**
-5. **Create proxy hosts for each service**
+### 3. Internal DNS Server
 
-## Advanced Configuration
+```bash
+mkdir ~/dns-server && cd ~/dns-server
 
-### Custom Domain Structure
+cat > docker-compose.yml << EOF
+services:
+  dnsmasq:
+    image: jpillora/dnsmasq
+    container_name: internal-dns
+    ports:
+      - "53:53/udp"
+    volumes:
+      - ./dnsmasq.conf:/etc/dnsmasq.conf
+    restart: unless-stopped
+EOF
 
-The hierarchical domain structure provides clear organization:
+cat > dnsmasq.conf << EOF
+address=/docker-host.example.com/192.168.1.100
+server=8.8.8.8
+server=1.1.1.1
+EOF
 
+docker compose up -d
 ```
-service.server.domain.com
-├── npm.docker-host.example.com
-├── portainer.docker-host.example.com  
-├── vault.docker-host.example.com
-└── wiki.docker-host.example.com
+
+### 4. Configure Tailscale SplitDNS
+
+In Tailscale admin console:
+- Add nameserver: `192.168.1.100`
+- Restrict to domain: `example.com`
+- Enable "Override local DNS"
+
+### 5. Nginx Proxy Manager
+
+```bash
+mkdir ~/nginx-proxy-manager && cd ~/nginx-proxy-manager
+
+cat > docker-compose.yml << EOF
+services:
+  app:
+    image: 'jc21/nginx-proxy-manager:latest'
+    container_name: nginx-proxy-manager
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '8181:81'
+    volumes:
+      - npm-data:/data
+      - npm-ssl:/etc/letsencrypt
+
+volumes:
+  npm-data:
+  npm-ssl:
+EOF
+
+docker compose up -d
 ```
 
-This scales naturally as your infrastructure grows:
-- `grafana.monitoring-server.example.com`
-- `gitlab.development-server.example.com`
-- `nextcloud.storage-server.example.com`
+Access NPM at `http://192.168.1.100:8181`
+- Default: `admin@example.com` / `changeme`
+- Change password and create wildcard SSL certificate for `*.docker-host.example.com`
 
-### SSL Certificate Management
+### 6. Deploy Services
 
-Wildcard certificates automatically cover all services under a server subdomain:
-- Single certificate for `*.docker-host.example.com`
-- Automatic renewal through Let's Encrypt
-- DNS challenge validation via Cloudflare API
+#### Portainer
 
-### Service Discovery
+```bash
+mkdir ~/portainer && cd ~/portainer
 
-New services integrate seamlessly:
-1. Deploy container with exposed port
-2. Create NPM proxy host with custom domain
-3. Apply existing wildcard certificate
-4. Service immediately available via HTTPS
+cat > docker-compose.yml << EOF
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
 
-## Security Model
+volumes:
+  portainer-data:
+EOF
 
-The setup implements defense-in-depth security:
+docker compose up -d
+```
 
-**Network Level:**
+#### Vaultwarden
+
+```bash
+mkdir ~/vaultwarden && cd ~/vaultwarden
+
+cat > docker-compose.yml << EOF
+services:
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    restart: unless-stopped
+    environment:
+      - WEBSOCKET_ENABLED=true
+    volumes:
+      - vw-data:/data
+    ports:
+      - "8080:80"
+      - "3012:3012"
+
+volumes:
+  vw-data:
+EOF
+
+docker compose up -d
+```
+
+#### Wiki.js
+
+```bash
+mkdir ~/wikijs && cd ~/wikijs
+
+cat > docker-compose.yml << EOF
+services:
+  wiki:
+    image: ghcr.io/requarks/wiki:2
+    container_name: wikijs
+    depends_on:
+      - db
+    environment:
+      DB_TYPE: postgres
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: wikijs
+      DB_PASS: wikijsrocks
+      DB_NAME: wiki
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+
+  db:
+    image: postgres:15-alpine
+    container_name: wiki-db
+    environment:
+      POSTGRES_DB: wiki
+      POSTGRES_PASSWORD: wikijsrocks
+      POSTGRES_USER: wikijs
+    restart: unless-stopped
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:
+EOF
+
+docker compose up -d
+```
+
+#### Uptime Kuma
+
+```bash
+mkdir ~/uptime-kuma && cd ~/uptime-kuma
+
+cat > docker-compose.yml << EOF
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    volumes:
+      - uptime-kuma:/app/data
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+volumes:
+  uptime-kuma:
+EOF
+
+docker compose up -d
+```
+
+#### Watchtower
+
+```bash
+mkdir ~/watchtower && cd ~/watchtower
+
+cat > docker-compose.yml << EOF
+services:
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400
+      - WATCHTOWER_NOTIFICATIONS=shoutrrr
+      - WATCHTOWER_NOTIFICATION_URL=logger://
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+      - WATCHTOWER_ROLLING_RESTART=true
+    restart: unless-stopped
+EOF
+
+docker compose up -d
+```
+
+### 7. Configure Proxy Hosts
+
+In NPM admin interface, create proxy hosts for each service:
+
+**NPM Admin:**
+- Domain: `npm.docker-host.example.com`
+- Forward: `192.168.1.100:8181`
+- SSL Certificate: `*.docker-host.example.com`
+
+**Portainer:**
+- Domain: `portainer.docker-host.example.com`
+- Forward: `192.168.1.100:9000`
+- SSL Certificate: `*.docker-host.example.com`
+
+**Vaultwarden:**
+- Domain: `vault.docker-host.example.com`
+- Forward: `192.168.1.100:8080`
+- SSL Certificate: `*.docker-host.example.com`
+
+**Wiki.js:**
+- Domain: `wiki.docker-host.example.com`
+- Forward: `192.168.1.100:3000`
+- SSL Certificate: `*.docker-host.example.com`
+
+**Uptime Kuma:**
+- Domain: `status.docker-host.example.com`
+- Forward: `192.168.1.100:3001`
+- SSL Certificate: `*.docker-host.example.com`
+
+## Testing
+
+From any Tailscale-connected device:
+
+```bash
+# Test DNS resolution
+nslookup npm.docker-host.example.com
+nslookup portainer.docker-host.example.com
+
+# Access services via browser
+https://npm.docker-host.example.com
+https://portainer.docker-host.example.com
+https://vault.docker-host.example.com
+https://wiki.docker-host.example.com
+https://status.docker-host.example.com
+```
+
+## Security Features
+
 - No exposed ports to internet
-- Tailscale encryption for all traffic
-- Subnet routing through controlled gateway
-
-**Application Level:**
-- SSL/TLS termination at proxy
-- Individual service authentication
+- Zero-trust access through Tailscale
+- Automatic SSL certificate management
+- Internal DNS resolution
 - Container isolation
-
-**Access Control:**
-- Device-based access through Tailscale
-- User-level service permissions
-- Audit logging through monitoring stack
-
-## Operational Benefits
-
-**For Development:**
-- Consistent HTTPS in development
-- Clean URLs for documentation
-- Easy service sharing with team
-
-**For Production:**
-- Enterprise-grade security model
-- Professional appearance
-- Simplified certificate management
-
-**For Learning:**
-- Modern networking concepts
-- Container orchestration
-- Infrastructure as code practices
-
-## Common Use Cases
-
-**Home Office:**
-- Internal wiki for documentation
-- Password manager for family
-- File sharing and synchronization
-
-**Small Business:**
-- Customer portal and documentation
-- Team collaboration tools
-- Secure remote access
-
-**Development Environment:**
-- Testing and staging environments
-- CI/CD pipeline integration
-- Code repository hosting
-
-
 
 ## Troubleshooting
 
-**DNS Resolution Issues:**
-- Verify Tailscale SplitDNS configuration
-- Check dnsmasq container logs
-- Confirm DNS query routing
+**DNS not resolving:**
+- Check Tailscale SplitDNS configuration
+- Verify dnsmasq container is running
 
-**SSL Certificate Problems:**
-- Validate Cloudflare API permissions
-- Review NPM certificate logs
-- Check DNS challenge propagation
+**SSL certificate issues:**
+- Confirm Cloudflare API token permissions
+- Check NPM certificate logs
 
-**Service Connectivity:**
-- Verify container health status
+**Service not accessible:**
+- Verify container is running with `docker ps`
 - Check NPM proxy host configuration
-- Confirm port availability
-
-## Contributing
-
-Contributions welcome for additional services, security improvements, and documentation updates. Please ensure changes maintain the zero-trust security model and follow the established domain structure.
-
-
-
----
-
-
-> **Note:** This setup serves as a foundation for advanced networking concepts and can be extended with additional security layers, monitoring solutions, and automation frameworks.
