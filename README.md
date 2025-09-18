@@ -1,10 +1,17 @@
 # Secure Homelab with Tailscale and Custom Domains
 
-A zero-trust homelab setup with custom domains, automatic SSL certificates, and no port forwarding required.
+> **A zero-trust homelab setup demonstrating enterprise-level networking, automatic SSL certificates, and custom domain management without port forwarding.**
+
+![Lab Status](https://img.shields.io/badge/Lab%20Status-Active-brightgreen)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED)
+![Tailscale](https://img.shields.io/badge/Tailscale-VPN-000000)
+![SSL](https://img.shields.io/badge/SSL-Let's%20Encrypt-green)
 
 ## Overview
 
-Transform basic IP-based service access into a professional homelab with custom domains accessible through clean URLs like `https://portainer.docker-host.example.com` exclusively to authorized devices.
+This project transforms basic IP-based service access into a professional homelab with custom domains and enterprise-grade security. Services are accessible through clean URLs like `https://portainer.docker-host.example.com` exclusively to authorized devices on your private network.
+
+The setup eliminates the need for traditional port forwarding while providing automatic SSL certificate management and seamless DNS resolution through Tailscale's zero-trust architecture.
 
 **Technology Stack:**
 - Tailscale (Zero-trust VPN)
