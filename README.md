@@ -36,7 +36,7 @@ Only your devices (via Tailscale) can access them, and SSL certs are handled aut
 # Install Tailscale on host server
 curl -fsSL https://tailscale.com/install.sh | sh
 
-# Configure with subnet routing
+# Configure with subnet routing (your local IP address)
 tailscale up --advertise-routes=192.168.1.0/24 --ssh
 ```
 
