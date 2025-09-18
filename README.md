@@ -11,7 +11,7 @@
 
 Tired of typing IP addresses and port numbers just to access your homelab services?
 
-This project turns that clunky experience into a clean, professional setup using custom domains, automatic HTTPS, and secure access, without needing port forwarding. Services are available at easy-to-remember URLs like (https://portainer.homelab.example.com), accessible only to authorized devices on your private network via Tailscale’s zero-trust architecture.
+This project turns that clunky experience into a clean, professional setup using custom domains, automatic HTTPS, and secure access, without needing port forwarding. Services are available at easy-to-remember URLs like `https://portainer.homelab.example.com`, accessible only to authorized devices on your private network via Tailscale’s zero-trust architecture.
 
 **Technology Stack:**
 - Tailscale (Zero-trust VPN)
